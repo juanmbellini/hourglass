@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "custom.simulation.time-step",
+      "type": "java.lang.Double",
+      "description": "The time step (i.e how much time elapses in one simulation step), in seconds."
+    },
+    {
+      "name": "custom.simulation.duration",
+      "type": "java.lang.Double",
+      "description": "Amount of time the simulation will last, in seconds ."
+    },
+    {
+      "name": "custom.output.ovito",
+      "type": "java.lang.String",
+      "description": "The path for the Ovito file."
+    }
+  ]
+}
