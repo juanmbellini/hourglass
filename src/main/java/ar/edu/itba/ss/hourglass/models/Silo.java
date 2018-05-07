@@ -41,6 +41,11 @@ public class Silo implements System<Silo.SiloState> {
     private final Wall rightBottomWall;
 
     /**
+     * The normal elastic constant.
+     */
+    private final double normalElasticConstant;
+
+    /**
      * The {@link Particle}s in this silo.
      */
     private final List<Particle> particles;
@@ -54,22 +59,26 @@ public class Silo implements System<Silo.SiloState> {
     /**
      * Constructor.
      *
-     * @param width     The silo's length.
-     * @param length    The silo's width.
-     * @param hole      The silo's hole size.
-     * @param minRadius The min. radius of a {@link Particle}.
-     * @param maxRadius The max. radius of a {@link Particle}.
-     * @param mass      The mass of a {@link Particle}.
+     * @param width                 The silo's length.
+     * @param length                The silo's width.
+     * @param hole                  The silo's hole size.
+     * @param normalElasticConstant The normal elastic constant.
+     * @param minRadius             The min. radius of a {@link Particle}.
+     * @param maxRadius             The max. radius of a {@link Particle}.
+     * @param mass                  The mass of a {@link Particle}.
      */
     public Silo(final double length, final double width, final double hole,
-                final double minRadius, final double maxRadius, final double mass) {
+                final double minRadius, final double maxRadius, final double mass,
+                final double normalElasticConstant) {
         validateShape(length, width, hole);
+        // TODO: validate radius, mass and elasticConstant
         final double bottomWallLength = (width - hole) / 2d;
         this.leftBottomWall = Wall.getHorizontal(Vector2D.ZERO, bottomWallLength);
         this.rightBottomWall = Wall.getHorizontal(new Vector2D(bottomWallLength + hole, 0), bottomWallLength);
         this.leftWall = Wall.getVertical(Vector2D.ZERO, length);
         this.rightWall = Wall.getVertical(new Vector2D(width, 0), length);
         this.topWall = Wall.getHorizontal(new Vector2D(length, 0), width);
+        this.normalElasticConstant = normalElasticConstant;
         this.particleProvider = new ParticleProvider(minRadius, maxRadius, mass,
                 leftBottomWall.getInitialPoint().getX(), rightWall.getFinalPoint().getX(),
                 leftBottomWall.getInitialPoint().getY(), rightWall.getFinalPoint().getY());
