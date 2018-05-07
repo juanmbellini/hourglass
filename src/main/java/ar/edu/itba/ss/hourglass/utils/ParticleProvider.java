@@ -53,4 +53,3 @@ public class ParticleProvider {
         return particles.size();
     }
 }
-
