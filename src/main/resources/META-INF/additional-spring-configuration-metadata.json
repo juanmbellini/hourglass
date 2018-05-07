@@ -1,6 +1,41 @@
 {
   "properties": [
     {
+      "name": "custom.system.particle.min-diameter",
+      "type": "java.lang.Double",
+      "description": "The min. diameter for a particle, in meters."
+    },
+    {
+      "name": "custom.system.particle.max-diameter",
+      "type": "java.lang.Double",
+      "description": "The max. diameter for a particle, in meters."
+    },
+    {
+      "name": "custom.system.particle.kn",
+      "type": "java.lang.Double",
+      "description": "The normal elastic constant."
+    },
+    {
+      "name": "custom.system.particle.mass",
+      "type": "java.lang.Double",
+      "description": "The particle's mass."
+    },
+    {
+      "name": "custom.system.silo.L",
+      "type": "java.lang.Double",
+      "description": "The silo's length."
+    },
+    {
+      "name": "custom.system.silo.W",
+      "type": "java.lang.Double",
+      "description": "The silo's width."
+    },
+    {
+      "name": "custom.system.silo.D",
+      "type": "java.lang.Double",
+      "description": "The silo's hole size."
+    },
+    {
       "name": "custom.simulation.time-step",
       "type": "java.lang.Double",
       "description": "The time step (i.e how much time elapses in one simulation step), in seconds."
@@ -17,3 +52,5 @@
     }
   ]
 }
+
+
