@@ -1,8 +1,11 @@
 package ar.edu.itba.ss.hourglass;
 
+import ar.edu.itba.ss.g7.engine.simulation.SimulationEngine;
+import ar.edu.itba.ss.hourglass.models.Silo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,10 +21,25 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Hourglass.class);
 
+    /**
+     * The {@link SimulationEngine}.
+     */
+    private final SimulationEngine<Silo.SiloState, Silo> engine;
+
+    /**
+     * Constructor.
+     */
+    @Autowired
+    public Hourglass() {
+        // TODO: initialize
+        final Silo silo = new Silo(null, null, null, null, null);
+        this.engine = new SimulationEngine<>(silo);
+    }
+
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        // TODO: initialize me here
+        this.engine.initialize();
     }
 
     @Override
@@ -41,7 +59,7 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
      */
     private void simulate() {
         LOGGER.info("Starting simulation...");
-        // TODO: simulate here
+        this.engine.simulate(Silo::isStabilized);
         LOGGER.info("Finished simulation");
     }
 

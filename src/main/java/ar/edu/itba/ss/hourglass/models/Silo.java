@@ -105,14 +105,18 @@ public class Silo implements System<Silo.SiloState> {
         return new LinkedList<>(particles);
     }
 
+    public boolean isStabilized() {
+        return false; // TODO: implement
+    }
+
     @Override
     public void update() {
-
+        // TODO: implement
     }
 
     @Override
     public void restart() {
-
+        // TODO: implement
     }
 
     @Override
