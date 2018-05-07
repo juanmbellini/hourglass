@@ -2,6 +2,9 @@ package ar.edu.itba.ss.hourglass.models;
 
 import ar.edu.itba.ss.g7.engine.models.System;
 import ar.edu.itba.ss.g7.engine.simulation.State;
+import ar.edu.itba.ss.hourglass.utils.ParticleProvider;
+import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+import org.springframework.util.Assert;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -11,7 +14,6 @@ import java.util.stream.Collectors;
  * Represents the silo to be simulated (i.e the {@link System} to be simulated).
  */
 public class Silo implements System<Silo.SiloState> {
-
 
     /**
      * The silo's top wall.
@@ -43,25 +45,37 @@ public class Silo implements System<Silo.SiloState> {
      */
     private final List<Particle> particles;
 
+    /**
+     * The {@link ParticleProvider} that will populate this silo with {@link Particle}s.
+     */
+    private final ParticleProvider particleProvider;
+
 
     /**
      * Constructor.
      *
-     * @param topWall         The silo's top wall.
-     * @param leftWall        The silo's left wall.
-     * @param rightWall       The silo's right wall.
-     * @param leftBottomWall  The silo's bottom wall that is left to the hole.
-     * @param rightBottomWall The silo's bottom wall that is right to the hole.
+     * @param width     The silo's length.
+     * @param length    The silo's width.
+     * @param hole      The silo's hole size.
+     * @param minRadius The min. radius of a {@link Particle}.
+     * @param maxRadius The max. radius of a {@link Particle}.
+     * @param mass      The mass of a {@link Particle}.
      */
-    public Silo(Wall topWall, Wall leftWall, Wall rightWall, Wall leftBottomWall, Wall rightBottomWall) {
-        this.topWall = topWall;
-        this.leftWall = leftWall;
-        this.rightWall = rightWall;
-        this.leftBottomWall = leftBottomWall;
-        this.rightBottomWall = rightBottomWall;
-        this.particles = new LinkedList<>(); // TODO: fill with the provider.
+    public Silo(final double length, final double width, final double hole,
+                final double minRadius, final double maxRadius, final double mass) {
+        validateShape(length, width, hole);
+        final double bottomWallLength = (width - hole) / 2d;
+        this.leftBottomWall = Wall.getHorizontal(Vector2D.ZERO, bottomWallLength);
+        this.rightBottomWall = Wall.getHorizontal(new Vector2D(bottomWallLength + hole, 0), bottomWallLength);
+        this.leftWall = Wall.getVertical(Vector2D.ZERO, length);
+        this.rightWall = Wall.getVertical(new Vector2D(width, 0), length);
+        this.topWall = Wall.getHorizontal(new Vector2D(length, 0), width);
+        this.particleProvider = new ParticleProvider(minRadius, maxRadius, mass,
+                leftBottomWall.getInitialPoint().getX(), rightWall.getFinalPoint().getX(),
+                leftBottomWall.getInitialPoint().getY(), rightWall.getFinalPoint().getY());
+        this.particles = new LinkedList<>();
+        this.particles.addAll(particleProvider.createParticles());
     }
-
 
     /**
      * @return The silo's top wall.
@@ -116,12 +130,26 @@ public class Silo implements System<Silo.SiloState> {
 
     @Override
     public void restart() {
-        // TODO: implement
+        this.particles.clear();
+        this.particles.addAll(this.particleProvider.createParticles());
     }
 
     @Override
     public SiloState outputState() {
         return new SiloState(this);
+    }
+
+    /**
+     * Validates the given shape values.
+     *
+     * @param length The silo's length to be validated.
+     * @param width  The silo's width to be validated.
+     * @param hole   The silo's hole size to be validated.
+     * @throws IllegalArgumentException If any value is not valid.
+     */
+    private static void validateShape(final double length, final double width, final double hole)
+            throws IllegalArgumentException {
+        Assert.isTrue(length > width && width > hole, "The given values of shape are not valid");
     }
 
     /**

@@ -1,6 +1,7 @@
 package ar.edu.itba.ss.hourglass;
 
 import ar.edu.itba.ss.g7.engine.simulation.SimulationEngine;
+import ar.edu.itba.ss.hourglass.io.ProgramArguments;
 import ar.edu.itba.ss.hourglass.models.Silo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +31,15 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
      * Constructor.
      */
     @Autowired
-    public Hourglass() {
-        // TODO: initialize
-        final Silo silo = new Silo(null, null, null, null, null);
+    public Hourglass(final ProgramArguments programArguments) {
+        final double siloLength = programArguments.getSiloShapeProperties().getSiloLength();
+        final double siloWidth = programArguments.getSiloShapeProperties().getSiloWidth();
+        final double siloHole = programArguments.getSiloShapeProperties().getSiloHoleSize();
+        final double minRadius = programArguments.getParticleProperties().getMinDiameter() / 2;
+        final double maxRadius = programArguments.getParticleProperties().getMaxDiameter() / 2;
+        final double mass = programArguments.getParticleProperties().getMass();
+        final Silo silo = new Silo(siloLength, siloWidth, siloHole, minRadius, maxRadius, mass);
+
         this.engine = new SimulationEngine<>(silo);
     }
 
