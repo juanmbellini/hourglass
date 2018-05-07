@@ -8,7 +8,7 @@ import org.springframework.util.Assert;
 /**
  * Represents a wall in the system.
  */
-public final class Wall implements Collisionable, StateHolder<Wall.WallState> {
+public final class Wall implements StateHolder<Wall.WallState> {
 
     /**
      * The wall's initial position.
@@ -51,22 +51,6 @@ public final class Wall implements Collisionable, StateHolder<Wall.WallState> {
         return finalPoint;
     }
 
-    //TODO: Don't know if we are going to need this.
-    @Override
-    public void collide(final Particle particle) {
-        final Vector2D velocity = particle.getVelocity();
-        switch (wallLayout) {
-        case HORIZONTAL:
-            particle.setVelocity(velocity.getX(), -velocity.getY());
-            break;
-        case VERTICAL:
-            particle.setVelocity(-velocity.getX(), velocity.getY());
-            break;
-        case OTHER:
-        default:
-            // TODO: any other?
-        }
-    }
 
     @Override
     public WallState outputState() {
@@ -76,35 +60,49 @@ public final class Wall implements Collisionable, StateHolder<Wall.WallState> {
     /**
      * Creates an horizontal wall (i.e having both initial and final point with the same 'y' component).
      *
-     * @param xInitialPosition The 'x' component of the initial point position.
-     * @param yInitialPosition The 'y' component of the initial point position.
-     * @param length           The length of the wall (must be positive).
+     * @param initialPosition The initial position of the wall.
+     * @param length          The length of the wall (must be positive).
      * @return The created wall.
      * @throws IllegalArgumentException In case the length is not positive.
+     * @apiNote The created wall will have the final point with the same 'y' component
+     * of the given {@code initialPoint}, and the 'x' component being {@code initialPoint.getX() + length},
+     * which means that it grows with 'x'.
      */
-    public static Wall getHorizontal(final double xInitialPosition, final double yInitialPosition, final double length)
-        throws IllegalArgumentException {
+    public static Wall getHorizontal(final Vector2D initialPosition, final double length)
+            throws IllegalArgumentException {
+        validateInitialPoint(initialPosition);
         validateLength(length);
-        final Vector2D initialPosition = new Vector2D(xInitialPosition, yInitialPosition);
-        final Vector2D finalPosition = new Vector2D(xInitialPosition + length, yInitialPosition);
+        final Vector2D finalPosition = new Vector2D(initialPosition.getX() + length, initialPosition.getY());
         return new Wall(initialPosition, finalPosition, WallLayout.HORIZONTAL);
     }
 
     /**
      * Creates a vertical wall (i.e having both initial and final point with the same 'x' component).
      *
-     * @param xInitialPosition The 'x' component of the initial point position.
-     * @param yInitialPosition The 'y' component of the initial point position.
-     * @param length           The length of the wall (must be positive).
+     * @param initialPosition The initial position of the wall.
+     * @param length          The length of the wall (must be positive).
      * @return The created wall.
      * @throws IllegalArgumentException In case the length is not positive.
+     * @apiNote The created wall will have the final point with the same 'x' component
+     * of the given {@code initialPoint}, and the 'y' component being {@code initialPoint.getY() + length},
+     * which means that it grows with 'y'.
      */
-    public static Wall getVertical(final double xInitialPosition, final double yInitialPosition, final double length)
-        throws IllegalArgumentException {
+    public static Wall getVertical(final Vector2D initialPosition, final double length)
+            throws IllegalArgumentException {
+        validateInitialPoint(initialPosition);
         validateLength(length);
-        final Vector2D initialPosition = new Vector2D(xInitialPosition, yInitialPosition);
-        final Vector2D finalPosition = new Vector2D(xInitialPosition, yInitialPosition + length);
+        final Vector2D finalPosition = new Vector2D(initialPosition.getX(), initialPosition.getY() + length);
         return new Wall(initialPosition, finalPosition, WallLayout.VERTICAL);
+    }
+
+    /**
+     * Validates the given {@code initialPoint}.
+     *
+     * @param initialPoint The initial point to be validated.
+     * @throws IllegalArgumentException In case the initial point is not valid (i.e is {@code null}).
+     */
+    private static void validateInitialPoint(final Vector2D initialPoint) throws IllegalArgumentException {
+        Assert.notNull(initialPoint, "The initial point must not be null");
     }
 
     /**
@@ -153,7 +151,7 @@ public final class Wall implements Collisionable, StateHolder<Wall.WallState> {
          *
          * @param wall The {@link Wall} owning this state.
          */
-        /* default */ WallState(final Wall wall) {
+        /* package */ WallState(final Wall wall) {
             initialPoint = wall.initialPoint;
             finalPoint = wall.finalPoint;
         }

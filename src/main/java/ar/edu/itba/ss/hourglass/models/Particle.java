@@ -3,13 +3,17 @@ package ar.edu.itba.ss.hourglass.models;
 import ar.edu.itba.ss.g7.engine.simulation.State;
 import ar.edu.itba.ss.g7.engine.simulation.StateHolder;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+import org.springframework.util.Assert;
 
 
 /**
  * Represents a particle in the system.
  */
-public class Particle implements Collisionable, StateHolder<Particle.ParticleState> {
+public class Particle implements StateHolder<Particle.ParticleState> {
 
+    /**
+     * Half.
+     */
     private static final double HALF = 0.5;
 
     /**
@@ -33,19 +37,38 @@ public class Particle implements Collisionable, StateHolder<Particle.ParticleSta
     private Vector2D velocity;
 
     /**
+     * The particle's acceleration (represented as a 2D vector).
+     */
+    private Vector2D acceleration;
+
+
+    /**
      * Constructor.
      *
-     * @param mass      The particle's mass.
-     * @param radius    The particle's radius.
-     * @param xPosition The particle's 'x' component of the position.
-     * @param yPosition The particle's 'y' component of the position.
+     * @param mass         The particle's mass.
+     * @param radius       The particle's radius.
+     * @param position     The particle's position (represented as a 2D vector).
+     * @param velocity     The particle's velocity (represented as a 2D vector).
+     * @param acceleration The particle's acceleration (represented as a 2D vector).
      */
-    public Particle(final double mass, final double radius, final double xPosition, final double yPosition) {
+    public Particle(final double mass, final double radius,
+                    final Vector2D position, final Vector2D velocity, final Vector2D acceleration) {
+        validateMass(mass);
+        validateRadius(radius);
+        validateVector(position);
+        validateVector(velocity);
+        validateVector(acceleration);
+
         this.mass = mass;
         this.radius = radius;
-        position = new Vector2D(xPosition, yPosition);
-        velocity = new Vector2D(0, 0);
+        this.position = position;
+        this.velocity = velocity;
+        this.acceleration = acceleration;
     }
+
+    // ================================================================================================================
+    // Getters
+    // ================================================================================================================
 
     /**
      * @return The particle's mass.
@@ -76,78 +99,99 @@ public class Particle implements Collisionable, StateHolder<Particle.ParticleSta
     }
 
     /**
+     * @return The particle's acceleration (represented as a 2D vector).
+     */
+    public Vector2D getAcceleration() {
+        return acceleration;
+    }
+
+    /**
      * @return The particle's kinetic energy.
      */
     public double getKineticEnergy() {
         return HALF * mass * velocity.getNormSq();
     }
 
+
+    // ================================================================================================================
+    // Setters
+    // ================================================================================================================
+
+    // TODO: check if state will be modified from outside or if the particle receives a System and, based on it, modifies itself
+
+    /**
+     * Sets a new position for this particle.
+     *
+     * @param position The new position for this particle.
+     */
+    public void setPosition(final Vector2D position) {
+        validateVector(position);
+        this.position = position;
+    }
+
     /**
      * Sets a new velocity for this particle.
      *
-     * @param xVelocity The new 'x' component of the velocity.
-     * @param yVelocity The new 'y' component of the velocity.
+     * @param velocity The new velocity for this particle.
      */
-    public void setVelocity(final double xVelocity, final double yVelocity) {
-        velocity = new Vector2D(xVelocity, yVelocity);
-    }
-
-    //TODO: Don't know if we are going to need this.
-    @Override
-    public void collide(final Particle other) {
-        final Vector2D deltaR = getDeltaR(other);
-        final Vector2D deltaV = getDeltaV(other);
-        final double deltaVByDeltaR = deltaV.dotProduct(deltaR);
-        final double sigma = getSigma(other);
-        final double impulse = (2 * mass * other.mass * deltaVByDeltaR) / (sigma * (mass + other.mass));
-        final double xImpulse = (impulse * deltaR.getX()) / sigma;
-        final double yImpulse = (impulse * deltaR.getY()) / sigma;
-
-        setVelocity(velocity.getX() + xImpulse / mass, velocity.getY() + yImpulse / mass);
-        other.setVelocity(other.velocity.getX() - xImpulse / other.mass, other.velocity.getY() - yImpulse / other.mass);
+    public void setVelocity(final Vector2D velocity) {
+        validateVector(velocity);
+        this.velocity = velocity;
     }
 
     /**
-     * Calculates position difference between this particle and the {@code other} particle.
+     * Sets a new acceleration for this particle.
      *
-     * @param other The other particle.
-     * @return A {@link Vector2D} with the difference of positions.
+     * @param acceleration The new acceleration for this particle.
      */
-    private Vector2D getDeltaR(final Particle other) {
-        return other.position.subtract(this.position);
+    public void setAcceleration(final Vector2D acceleration) {
+        validateVector(acceleration);
+        this.acceleration = acceleration;
     }
+
 
     /**
-     * Calculates velocity difference between this particle and the {@code other} particle.
+     * Checks if another particle can be created with the given {@code position} and {@code radius} arguments.
      *
-     * @param other The other particle.
-     * @return A {@link Vector2D} with the difference of positions.
-     */
-    private Vector2D getDeltaV(final Particle other) {
-        return other.velocity.subtract(this.velocity);
-    }
-
-    /**
-     * Calculates the distance between the mass center of this particle and the {@code other} particle.
-     *
-     * @param other The other particle.
-     * @return A {@link Vector2D} with the difference of positions.
-     */
-    private double getSigma(final Particle other) {
-        return this.radius + other.radius;
-    }
-
-    /*
-     * Check's if another {@link Particle}'s position overlaps this Particle's space.
-     *
-     * @param position A Particle's position.
-     * @param radius A Particle's radius.
-     * @return True if the Particle overlaps the position, false if not.
+     * @param position The position where the new particle will be created.
+     * @param radius   The radius of the new particle.
+     * @return {@code true} if the new particle would overlap {@code this} particle, or {@code false} otherwise.
      */
     public boolean doOverlap(final Vector2D position, final double radius) {
-        final Vector2D dif = this.position.subtract(position);
-        return dif.getX() <= (radius + this.radius) || dif.getY() <= (radius + this.radius);
+        final double distanceBetweenCentreMasses = this.position.distance(position);
+        return Double.compare(distanceBetweenCentreMasses, this.radius + radius) >= 0;
     }
+
+    /**
+     * Validates the given {@code radius} value.
+     *
+     * @param radius The radius value to be validated.
+     * @throws IllegalArgumentException In case the given {@code radius} value is not value (i.e is not positive).
+     */
+    private static void validateRadius(final double radius) throws IllegalArgumentException {
+        Assert.isTrue(radius > 0, "The radius must be positive");
+    }
+
+    /**
+     * Validates the given {@code mass} value.
+     *
+     * @param mass The mass value to be validated.
+     * @throws IllegalArgumentException In case the given {@code mass} value is not value (i.e is not positive).
+     */
+    private static void validateMass(final double mass) throws IllegalArgumentException {
+        Assert.isTrue(mass > 0, "The mass must be positive");
+    }
+
+    /**
+     * Validates the given {@code vector}.
+     *
+     * @param vector The {@link Vector2D} to be validated.
+     * @throws IllegalArgumentException In case the given {@code vector} is not valid (i.e is {@code null}).
+     */
+    private static void validateVector(final Vector2D vector) throws IllegalArgumentException {
+        Assert.notNull(vector, "The given vector is null");
+    }
+
 
     @Override
     public ParticleState outputState() {
@@ -180,15 +224,21 @@ public class Particle implements Collisionable, StateHolder<Particle.ParticleSta
         private final Vector2D velocity;
 
         /**
+         * The {@link Particle}'s acceleration (represented as a 2D vector).
+         */
+        private final Vector2D acceleration;
+
+        /**
          * Constructor.
          *
          * @param particle The {@link Particle}'s whose state will be represented.
          */
-        /* default */ ParticleState(final Particle particle) {
+        /* package */ ParticleState(final Particle particle) {
             mass = particle.getMass();
             radius = particle.getRadius();
             position = particle.getPosition(); // The Vector2D class is unmodifiable.
             velocity = particle.getVelocity(); // The Vector2D class is unmodifiable.
+            acceleration = particle.getAcceleration(); // The Vector2D class is unmodifiable.
         }
 
         /**
@@ -217,6 +267,13 @@ public class Particle implements Collisionable, StateHolder<Particle.ParticleSta
          */
         public Vector2D getVelocity() {
             return velocity;
+        }
+
+        /**
+         * @return The {@link Particle}'s acceleration (represented as a 2D vector).
+         */
+        public Vector2D getAcceleration() {
+            return acceleration;
         }
     }
 }
