@@ -13,6 +13,12 @@ import java.util.Random;
 public class ParticleProvider {
 
     /**
+     * The max. amount of consecutive failed tries of adding a {@link Particle}
+     * into the returned {@link List} of {@link Particle} by the {@link #createParticles()} method.
+     */
+    private static final int MAX_AMOUNT_OF_TRIES = 3000;
+
+    /**
      * The min. radius of a {@link Particle}.
      */
     private final double minRadius;
@@ -71,27 +77,19 @@ public class ParticleProvider {
      */
     public List<Particle> createParticles() {
         final List<Particle> particles = new LinkedList<>();
-        boolean addMore = true;
-        while (addMore) {
+        int tries = 0; // Will count the amount of consecutive failed tries of adding randomly a particle into the list.
+        while (tries < MAX_AMOUNT_OF_TRIES) {
             final double xPosition = xMin + new Random().nextDouble() * (xMax - xMin);
             final double yPosition = yMin + new Random().nextDouble() * (yMax - yMin);
             final Vector2D position = new Vector2D(xPosition, yPosition);
             final double radius = minRadius + new Random().nextDouble() * (maxRadius - minRadius);
             if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
                 particles.add(new Particle(this.mass, radius, position, Vector2D.ZERO, Vector2D.ZERO));
-                addMore = canAddMore(particles); // Check if more particles can be added.
+                tries = 0; // When a particle is added, the counter of consecutive failed tries must be set to zero.
+            } else {
+                tries++;
             }
         }
         return particles;
-    }
-
-    /**
-     * Indicates whether more {@link Particle}s can be added into the given {@code particles} {@link List}.
-     *
-     * @param particles The {@link List} of {@link Particle}s.
-     * @return {@code true} if more {@link Particle}s can be added, or {@code false} otherwise.
-     */
-    private boolean canAddMore(final List<Particle> particles) {
-        return true; // TODO: check how to modify this.
     }
 }
