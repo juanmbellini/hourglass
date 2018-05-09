@@ -3,53 +3,93 @@ package ar.edu.itba.ss.hourglass.utils;
 import ar.edu.itba.ss.hourglass.models.Particle;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 
-import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * Provides {@link Particle}s to the system.
  */
 public class ParticleProvider {
 
-
-    private static final double MASS = 0.01;
-    private static final double MIN_DIAMETER = 0.02;
-    private static final double MAX_DIAMETER = 0.03;
-
     /**
-     * {@link Set} containing the already created {@link Particle}s.
+     * The max. amount of consecutive failed tries of adding a {@link Particle}
+     * into the returned {@link List} of {@link Particle} by the {@link #createParticles()} method.
      */
-    public final Set<Particle> particles;
-
-    public ParticleProvider() {
-        particles = new HashSet<>();
-    }
-
-    //TODO: depends on how we model the system we could define the range of positions that we want
-    // and use random positions in this method too.
+    private static final int MAX_AMOUNT_OF_TRIES = 3000;
 
     /**
-     * Adds another {@link Particle} in the system, if possible.
+     * The min. radius of a {@link Particle}.
+     */
+    private final double minRadius;
+    /**
+     * The max. radius of a {@link Particle}.
+     */
+    private final double maxRadius;
+    /**
+     * The {@link Particle}s' mass.
+     */
+    private final double mass;
+    /**
+     * The min. value for a position ('x' component).
+     */
+    private final double xMin;
+    /**
+     * The max. value for a position ('x' component).
+     */
+    private final double xMax;
+    /**
+     * The min. value for a position ('y' component).
+     */
+    private final double yMin;
+    /**
+     * The max. value for a position ('y' component).
+     */
+    private final double yMax;
+
+
+    /**
+     * Constructor.
      *
-     * @param position The new Particle's position
-     * @return True if another Particle fits in the system, false if not.
+     * @param minRadius The min. radius of a {@link Particle}.
+     * @param maxRadius The max. radius of a {@link Particle}.
+     * @param mass      The mass of a {@link Particle}.
+     * @param xMin      The min. value for a position ('x' component).
+     * @param xMax      The max. value for a position ('x' component).
+     * @param yMin      The min. value for a position ('y' component).
+     * @param yMax      The max. value for a position ('y' component).
      */
-    public boolean addParticle(final Vector2D position) {
-        final double radius = MIN_DIAMETER + new Random().nextDouble() * (MAX_DIAMETER - MIN_DIAMETER);
-
-        if (particles.stream().anyMatch(p -> p.doOverlap(position, radius))) {
-            return false;
-        } else {
-            particles.add(new Particle(MASS, radius, position, Vector2D.ZERO, Vector2D.ZERO));
-            return true;
-        }
+    public ParticleProvider(final double minRadius, final double maxRadius, final double mass,
+                            final double xMin, final double xMax, final double yMin, final double yMax) {
+        this.minRadius = minRadius;
+        this.maxRadius = maxRadius;
+        this.mass = mass;
+        this.xMin = xMin;
+        this.xMax = xMax;
+        this.yMin = yMin;
+        this.yMax = yMax;
     }
 
     /**
-     * Returns the amount of {@link Particle}s in the system.
+     * Creates the needed {@link Particle}s.
+     *
+     * @return A {@link List} with the created {@link Particle}s.
      */
-    public int getAmountOfParticles() {
-        return particles.size();
+    public List<Particle> createParticles() {
+        final List<Particle> particles = new LinkedList<>();
+        int tries = 0; // Will count the amount of consecutive failed tries of adding randomly a particle into the list.
+        while (tries < MAX_AMOUNT_OF_TRIES) {
+            final double xPosition = xMin + new Random().nextDouble() * (xMax - xMin);
+            final double yPosition = yMin + new Random().nextDouble() * (yMax - yMin);
+            final Vector2D position = new Vector2D(xPosition, yPosition);
+            final double radius = minRadius + new Random().nextDouble() * (maxRadius - minRadius);
+            if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
+                particles.add(new Particle(this.mass, radius, position, Vector2D.ZERO, Vector2D.ZERO));
+                tries = 0; // When a particle is added, the counter of consecutive failed tries must be set to zero.
+            } else {
+                tries++;
+            }
+        }
+        return particles;
     }
 }

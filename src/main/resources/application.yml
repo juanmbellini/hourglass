@@ -6,6 +6,14 @@ spring:
     main:
         banner-mode: "off"
 
+custom:
+    system:
+        particle:
+            min-diameter: 0.02
+            max-diameter: 0.03
+            kn: 100000
+            mass: 0.01
+
 
 ---
 # Configuration for Development Environment

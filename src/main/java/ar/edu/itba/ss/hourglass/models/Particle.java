@@ -159,7 +159,7 @@ public class Particle implements StateHolder<Particle.ParticleState> {
      */
     public boolean doOverlap(final Vector2D position, final double radius) {
         final double distanceBetweenCentreMasses = this.position.distance(position);
-        return Double.compare(distanceBetweenCentreMasses, this.radius + radius) >= 0;
+        return Double.compare(distanceBetweenCentreMasses, this.radius + radius) < 0;
     }
 
     /**
