@@ -16,6 +16,11 @@
       "description": "The normal elastic constant."
     },
     {
+      "name": "custom.system.particle.gamma",
+      "type": "java.lang.Double",
+      "description": "The viscous damping coefficient."
+    },
+    {
       "name": "custom.system.particle.mass",
       "type": "java.lang.Double",
       "description": "The particle's mass."
@@ -34,6 +39,11 @@
       "name": "custom.system.silo.D",
       "type": "java.lang.Double",
       "description": "The silo's hole size."
+    },
+    {
+      "name": "custom.simulation.duration",
+      "type": "java.lang.Double",
+      "description": "The Simulation's duration, in seconds."
     },
     {
       "name": "custom.output.ovito",

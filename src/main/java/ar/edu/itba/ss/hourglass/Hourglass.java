@@ -39,7 +39,10 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
         final double maxRadius = programArguments.getParticleProperties().getMaxDiameter() / 2;
         final double mass = programArguments.getParticleProperties().getMass();
         final double normalElasticConstant = programArguments.getParticleProperties().getNormalElasticConstant();
-        final Silo silo = new Silo(siloLength, siloWidth, siloHole, minRadius, maxRadius, mass, normalElasticConstant);
+        final double viscousDampingCoefficient = programArguments.getParticleProperties().getViscousDampingCoefficient();
+        final double duration = programArguments.getDuration();
+        final Silo silo = new Silo(siloLength, siloWidth, siloHole, minRadius, maxRadius, mass,
+                normalElasticConstant, viscousDampingCoefficient, duration);
 
         this.engine = new SimulationEngine<>(silo);
     }
@@ -67,7 +70,7 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
      */
     private void simulate() {
         LOGGER.info("Starting simulation...");
-        this.engine.simulate(Silo::isStabilized);
+        this.engine.simulate(Silo::shouldStop);
         LOGGER.info("Finished simulation");
     }
 
