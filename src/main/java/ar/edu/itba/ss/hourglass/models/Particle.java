@@ -113,6 +113,107 @@ public class Particle implements StateHolder<Particle.ParticleState> {
     }
 
 
+    /**
+     * Returns the contact force {@code this} particle suffers
+     * because of the action of the given {@code other} particle.
+     *
+     * @param other                     The other particle.
+     * @param elasticConstant           The elastic constant.
+     * @param viscousDampingCoefficient The viscous damping coefficient.
+     * @return The contact force the {@code other} particle applies on {@code this} particle.
+     * @apiNote If both particles are not in contact, the force will be a {@link Vector2D#ZERO} force.
+     */
+    public Vector2D getContactForce(final Particle other,
+                                    // TODO: maybe saved? they are not part of a particle but of the system.
+                                    final double elasticConstant, final double viscousDampingCoefficient) {
+        if (!doOverlap(other)) {
+            return Vector2D.ZERO; // If they do not overlap, the force is zero.
+        }
+
+        final Vector2D normalUnitVector = other.position.subtract(this.position).normalize();
+        final Vector2D elasticForce = getElasticForce(normalUnitVector, elasticConstant, overlap(other));
+        final Vector2D dampedForce = getDampedForce(normalUnitVector, viscousDampingCoefficient,
+                other.velocity.subtract(this.velocity));
+
+        return getContactForce(elasticForce, dampedForce);
+    }
+
+    /**
+     * Returns the contact force  {@code this} particle suffers
+     * because of the action of colliding with the given {@code wall}.
+     *
+     * @param wall                      The wall.
+     * @param elasticConstant           The elastic constant.
+     * @param viscousDampingCoefficient The viscous damping coefficient.
+     * @return The contact force the {@code wall} applies on {@code this} particle.
+     * @apiNote If the particle is not in contact with the {@code wall},
+     * the force will be a {@link Vector2D#ZERO} force.
+     */
+    public Vector2D getContactForce(final Wall wall,
+                                    // TODO: maybe saved? they are not part of a particle but of the system.
+                                    final double elasticConstant, final double viscousDampingCoefficient) {
+        final Vector2D projectionInWall = projectionInWall(wall);
+        final Vector2D fromWallNormal = projectionInWall.subtract(position);
+        final double overlap = radius - fromWallNormal.getNorm();
+        if (overlap <= 0) {
+            return Vector2D.ZERO; // If they do not overlap, the force is zero.
+        }
+
+        final Vector2D normalUnitVector = fromWallNormal.normalize();
+        final Vector2D elasticForce = getElasticForce(normalUnitVector, elasticConstant, overlap);
+        final Vector2D dampedForce = getDampedForce(normalUnitVector, viscousDampingCoefficient,
+                velocity.scalarMultiply(-1));
+
+        return getContactForce(elasticForce, dampedForce);
+    }
+
+    /**
+     * Returns the contact force.
+     *
+     * @param elasticForce The elastic force component.
+     * @param dampedForce  The damped force component.
+     * @return The contact force.
+     * @implNote This method just sums both forces.
+     */
+    private Vector2D getContactForce(final Vector2D elasticForce, final Vector2D dampedForce) {
+        return elasticForce.add(dampedForce);
+    }
+
+    /**
+     * Calculates the elastic force.
+     *
+     * @param normalUnitVector The normal unit {@link Vector2D} that exists between {@code this} particle
+     *                         and the body being collided.
+     * @param elasticConstant  The elastic constant.
+     * @param overlap          The amount of distance being overlapped.
+     * @return The elastic force.
+     */
+    private Vector2D getElasticForce(final Vector2D normalUnitVector,
+                                     final double elasticConstant, final double overlap) {
+        return normalUnitVector
+                .scalarMultiply(elasticConstant)
+                .scalarMultiply(overlap)
+                .scalarMultiply(-1);
+    }
+
+    /**
+     * Calculates the demped force.
+     *
+     * @param normalUnitVector          The normal unit {@link Vector2D} that exists between {@code this} particle
+     *                                  and the body being collided.
+     * @param viscousDampingCoefficient The viscous damping coefficient.
+     * @param relativeVelocity          The relative velocity between {@code this} particle and the body being collided.
+     * @return The damped force.
+     */
+    private Vector2D getDampedForce(final Vector2D normalUnitVector,
+                                    final double viscousDampingCoefficient, final Vector2D relativeVelocity) {
+        return normalUnitVector
+                .scalarMultiply(relativeVelocity.dotProduct(normalUnitVector))
+                .scalarMultiply(viscousDampingCoefficient)
+                .scalarMultiply(-1);
+    }
+
+
     // ================================================================================================================
     // Setters
     // ================================================================================================================
@@ -149,6 +250,19 @@ public class Particle implements StateHolder<Particle.ParticleState> {
         this.acceleration = acceleration;
     }
 
+    // ================================================================================================================
+    // Others
+    // ================================================================================================================
+
+    /**
+     * Checks if {@code this} particle overlaps with the given {@code other} particle.
+     *
+     * @param other The other particle.
+     * @return {@code true} if they overlap {@code this}, or {@code false} otherwise.
+     */
+    public boolean doOverlap(final Particle other) {
+        return doOverlap(other.position, other.radius);
+    }
 
     /**
      * Checks if another particle can be created with the given {@code position} and {@code radius} arguments.
@@ -158,8 +272,48 @@ public class Particle implements StateHolder<Particle.ParticleState> {
      * @return {@code true} if the new particle would overlap {@code this} particle, or {@code false} otherwise.
      */
     public boolean doOverlap(final Vector2D position, final double radius) {
-        final double distanceBetweenCentreMasses = this.position.distance(position);
-        return Double.compare(distanceBetweenCentreMasses, this.radius + radius) < 0;
+        return overlap(this.position, position, this.radius, radius) > 0;
+    }
+
+    /**
+     * Calculates how much {@code this} particle overlaps with the given {@code other particle}.
+     *
+     * @param other The other particle.
+     * @return The overlapping amount between the particles.
+     */
+    public double overlap(final Particle other) {
+        return overlap(this.position, other.position, this.radius, other.radius);
+    }
+
+    /**
+     * Returns the projection of the {@link #position} of {@code this} particle in the given {@code wall}.
+     *
+     * @param wall The {@link Wall} in which the projection is made.
+     * @return The projection {@link Vector2D}.
+     */
+    private Vector2D projectionInWall(final Wall wall) {
+        final Vector2D directionVector = wall.getDirectionVector();
+        final Vector2D fromInitial = position.subtract(wall.getInitialPoint());
+
+        return directionVector
+                .scalarMultiply(fromInitial.dotProduct(directionVector))
+                .scalarMultiply(1 / directionVector.getNormSq());
+    }
+
+    /**
+     * Calculates how much to particles with the given
+     * {@code position1}, {@code position2}, {@code radius1}, and {@code radius2} would overlap.
+     *
+     * @param position1 The first particle's position.
+     * @param position2 The second particle's position.
+     * @param radius1   The first particle's radius.
+     * @param radius2   The second particle's radius.
+     * @return The overlapping amount.
+     * @apiNote A value of zero or less indicates that there is no overlapping.
+     */
+    private static double overlap(Vector2D position1, Vector2D position2, double radius1, double radius2) {
+        final double value = radius1 + radius2 - position1.distance(position2);
+        return value < 0 ? 0 : value;
     }
 
     /**

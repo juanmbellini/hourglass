@@ -52,6 +52,16 @@ public final class Wall implements StateHolder<Wall.WallState> {
     }
 
 
+    /**
+     * @return The direction vector of thw wall (goes from the initial point to the final point).
+     * @see <a href="https://es.wikipedia.org/wiki/Vector_director">Vector Director</a>
+     * @see <a href="https://en.wikipedia.org/wiki/Euclidean_vector">Euclidean Vector</a>
+     */
+    public Vector2D getDirectionVector() {
+        return finalPoint.subtract(initialPoint);
+    }
+
+
     @Override
     public WallState outputState() {
         return new WallState(this);
