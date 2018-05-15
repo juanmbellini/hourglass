@@ -4,10 +4,12 @@ import ar.edu.itba.ss.g7.engine.models.System;
 import ar.edu.itba.ss.g7.engine.simulation.State;
 import ar.edu.itba.ss.hourglass.utils.Constants;
 import ar.edu.itba.ss.hourglass.utils.ParticleProvider;
+import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.springframework.util.Assert;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -15,6 +17,11 @@ import java.util.stream.Stream;
  * Represents the silo to be simulated (i.e the {@link System} to be simulated).
  */
 public class Silo implements System<Silo.SiloState> {
+
+    /**
+     * The max. amount of consecutive failed tries of re-spawning a {@link Particle}
+     */
+    private static final int MAX_AMOUNT_OF_TRIES = 1000;
 
 
     // ================================================================================================================
@@ -45,6 +52,16 @@ public class Silo implements System<Silo.SiloState> {
      * The silo's bottom wall that is right to the hole.
      */
     private final Wall rightBottomWall;
+
+    /**
+     * The silo's length (i.e used for re-spawning {@link Particle}s).
+     */
+    private final double siloLength;
+
+    /**
+     * The silo's width (i.e used for re-spawning {@link Particle}s).
+     */
+    private final double siloWidth;
 
 
     // ================================================================================================================
@@ -85,6 +102,30 @@ public class Silo implements System<Silo.SiloState> {
      * The {@link Integrator} used to move {@link Particle}s.
      */
     private final Integrator integrator;
+
+    // ================================================================================================================
+    // Physics
+    // ================================================================================================================
+
+    /**
+     * The system's actual kinetic energy.
+     */
+    private double systemKineticEnergy;
+
+    /**
+     * The total amount of {@link Particle}s that have left the silo.
+     */
+    private long outsideParticles;
+
+    /**
+     * The actual amount of new {@link Particle}s outside the silo.
+     */
+    private long newOutside;
+
+    /**
+     * The total amount of {@link Particle}s that have been re-spawned.
+     */
+    private long reSpawnedAmount;
 
 
     // ================================================================================================================
@@ -127,6 +168,8 @@ public class Silo implements System<Silo.SiloState> {
         this.leftWall = Wall.getLeftWall(length);
         this.rightWall = Wall.getRightWall(length, width);
         this.topWall = Wall.getTopWall(length, width);
+        this.siloLength = length;
+        this.siloWidth = width;
 
         // Particles
         this.particleProvider = new ParticleProvider(minRadius, maxRadius, mass,
@@ -144,6 +187,12 @@ public class Silo implements System<Silo.SiloState> {
                 .collect(Collectors.toList());
         this.integrator = new BeemanIntegrator(particles, walls, length, width, timeStep,
                 elasticConstant, dampingCoefficient, Constants.GRAVITY);
+
+        // Physics
+        saveKineticEnergy();
+        this.outsideParticles = 0;
+        this.newOutside = 0;
+        this.reSpawnedAmount = 0;
 
         this.clean = true;
     }
@@ -196,6 +245,20 @@ public class Silo implements System<Silo.SiloState> {
     }
 
     /**
+     * @return The system's actual kinetic energy.
+     */
+    public double getSystemKineticEnergy() {
+        return systemKineticEnergy;
+    }
+
+    /**
+     * @return The actual amount of new {@link Particle}s outside the silo.
+     */
+    public long getNewOutside() {
+        return newOutside;
+    }
+
+    /**
      * Indicates whether the simulation should stop.
      *
      * @return {@code true} if the simulation should stop, or {@code false} otherwise.
@@ -213,6 +276,15 @@ public class Silo implements System<Silo.SiloState> {
     public void update() {
         clean = false;
         integrator.update();
+        saveKineticEnergy();
+        final long belowZero = particles.stream()
+                .map(Particle::getPosition)
+                .mapToDouble(Vector2D::getY)
+                .count();
+        this.newOutside = belowZero - outsideParticles + reSpawnedAmount;
+        this.outsideParticles += this.newOutside;
+        respawn();
+
         actualTime += timeStep;
     }
 
@@ -224,6 +296,7 @@ public class Silo implements System<Silo.SiloState> {
 
         this.particles.clear();
         this.particles.addAll(this.particleProvider.createParticles());
+        this.integrator.setNewParticles(particles);
         this.actualTime = 0;
         this.clean = true;
     }
@@ -249,6 +322,80 @@ public class Silo implements System<Silo.SiloState> {
     private static void validateShape(final double length, final double width, final double hole)
             throws IllegalArgumentException {
         Assert.isTrue(length > width && width > hole, "The given values of shape are not valid");
+    }
+
+    /**
+     * Saves the actual kinetic energy of the system.
+     */
+    private void saveKineticEnergy() {
+        this.systemKineticEnergy = particles.stream().mapToDouble(Particle::getKineticEnergy).sum();
+    }
+
+    /**
+     * Performs the respawn of the {@link Particle}s.
+     */
+    private void respawn() {
+        final List<Particle> insideTheSilo = particles.stream()
+                .parallel()
+                .filter(particle -> particle.getPosition().getY() > 0)
+                .collect(Collectors.toList());
+        if (insideTheSilo.isEmpty()) {
+            for (Particle particle : particles) {
+                respawn(particle, 0, 3 * particle.getRadius());
+            }
+            this.integrator.reportReSpawned(particles);
+        }
+
+        final double mean = insideTheSilo.stream()
+                .parallel()
+                .map(Particle::getPosition)
+                .mapToDouble(Vector2D::getY)
+                .average()
+                .orElseThrow(() -> new RuntimeException("This should not happen"));
+        final double standardDeviation = insideTheSilo.stream()
+                .parallel()
+                .map(Particle::getPosition)
+                .mapToDouble(Vector2D::getY)
+                .map(y -> y - mean)
+                .map(y -> y * y)
+                .average()
+                .orElseThrow(() -> new RuntimeException("This should not happen"));
+        final List<Particle> mustRespawn = particles
+                .stream()
+                .parallel()
+                .filter(particle -> particle.getPosition().getY() < -siloLength / 10d)
+                .collect(Collectors.toList());
+        final double minY = mean + 2 * standardDeviation;
+        for (Particle particle : mustRespawn) {
+            respawn(particle, minY + 4 * particle.getRadius(), minY + 8 * particle.getRadius());
+        }
+        this.integrator.reportReSpawned(mustRespawn);
+    }
+
+    /**
+     * Performs the respawn of the given {@code particle}.
+     *
+     * @param particle    The {@link Particle} to be re-spawned.
+     * @param yRespawnMin The min. 'y' at which the given {@code particle} can be re-spawned.
+     * @param yRespawnMax The max. 'y' at which the given {@code particle} can be re-spawned.
+     */
+    private void respawn(final Particle particle, final double yRespawnMin, final double yRespawnMax) {
+        int tries = 0;
+        while (tries < MAX_AMOUNT_OF_TRIES) {
+            final double radius = particle.getRadius();
+            final double xPosition = radius + new Random().nextDouble() * (siloWidth - 2 * radius);
+            final double yPosition = yRespawnMin + new Random().nextDouble() * (yRespawnMax - yRespawnMin);
+            final Vector2D position = new Vector2D(xPosition, yPosition);
+            if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
+                particle.setPosition(position);
+                particle.setVelocity(Vector2D.ZERO);
+                particle.setAcceleration(Constants.GRAVITY);
+                this.reSpawnedAmount++;
+                return;
+            } else {
+                tries++;
+            }
+        }
     }
 
     /**
@@ -286,6 +433,16 @@ public class Silo implements System<Silo.SiloState> {
          */
         private final List<Particle.ParticleState> particleStates;
 
+        /**
+         * The system's kinetic energy.
+         */
+        private final double kineticEnergy;
+
+        /**
+         * The new amount of particle's that have left the silo in this state (i.e the flow).
+         */
+        private final long newOutside;
+
 
         /**
          * Constructor.
@@ -301,6 +458,8 @@ public class Silo implements System<Silo.SiloState> {
             this.particleStates = silo.getParticles().stream()
                     .map(Particle.ParticleState::new)
                     .collect(Collectors.toList());
+            this.kineticEnergy = silo.getSystemKineticEnergy();
+            this.newOutside = silo.getNewOutside();
         }
 
         /**
@@ -344,5 +503,20 @@ public class Silo implements System<Silo.SiloState> {
         public List<Particle.ParticleState> getParticleStates() {
             return particleStates;
         }
+
+        /**
+         * @return The system's kinetic energy.
+         */
+        public double getKineticEnergy() {
+            return kineticEnergy;
+        }
+
+        /**
+         * @return The new amount of particle's that have left the silo in this state (i.e the flow).
+         */
+        public long getNewOutside() {
+            return newOutside;
+        }
+
     }
 }

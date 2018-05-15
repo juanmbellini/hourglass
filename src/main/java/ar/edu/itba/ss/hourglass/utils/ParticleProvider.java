@@ -67,7 +67,7 @@ public class ParticleProvider {
         this.xMin = xMin;
         this.xMax = xMax;
         this.yMin = yMin;
-        this.yMax = yMax * 0.35;
+        this.yMax = yMax * 0.3;
     }
 
     /**

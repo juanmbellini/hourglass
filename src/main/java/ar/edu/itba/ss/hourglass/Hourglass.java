@@ -3,6 +3,7 @@ package ar.edu.itba.ss.hourglass;
 import ar.edu.itba.ss.g7.engine.io.DataSaver;
 import ar.edu.itba.ss.g7.engine.simulation.SimulationEngine;
 import ar.edu.itba.ss.hourglass.io.OvitoFileSaverImpl;
+import ar.edu.itba.ss.hourglass.io.PhysicsDataSaver;
 import ar.edu.itba.ss.hourglass.io.ProgramArguments;
 import ar.edu.itba.ss.hourglass.models.Silo;
 import org.slf4j.Logger;
@@ -37,6 +38,11 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
     private final DataSaver<Silo.SiloState> ovitoFileSaver;
 
     /**
+     * A {@link DataSaver} to create a physics file.
+     */
+    private final DataSaver<Silo.SiloState> physicsFileSaver;
+
+    /**
      * Constructor.
      */
     @Autowired
@@ -55,6 +61,7 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
 
         this.engine = new SimulationEngine<>(silo);
         this.ovitoFileSaver = new OvitoFileSaverImpl(programArguments.getOutputStuff().getOvitoFilePath());
+        this.physicsFileSaver = new PhysicsDataSaver(programArguments.getOutputStuff().getPhysicsFilePath());
     }
 
 
@@ -90,6 +97,7 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
     private void save() {
         LOGGER.info("Saving outputs...");
         ovitoFileSaver.save(new LinkedList<>(this.engine.getResults()));
+        physicsFileSaver.save(new LinkedList<>(this.engine.getResults()));
         // TODO: save here
         LOGGER.info("Finished saving output in all formats.");
     }
