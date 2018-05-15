@@ -16,7 +16,7 @@ import java.util.stream.Stream;
     /**
      * The max. amount of consecutive failed tries of re-spawning a {@link Particle}
      */
-    private static final int MAX_AMOUNT_OF_TRIES = 300;
+    private static final int MAX_AMOUNT_OF_TRIES = 1000;
 
     /**
      * The {@link List} of {@link Particle}s that are going to be integrated.
@@ -97,7 +97,6 @@ import java.util.stream.Stream;
 
     @Override
     public void update() {
-//        final Map<Particle, List<Particle>> neighborHoods = neighborhoodsCalculator.computeNeighborhoods();
         final Map<Particle, List<Particle>> neighborHoods = particles.stream()
                 .collect(Collectors.toMap(Function.identity(), particle -> particles.stream()
                         .parallel()
@@ -111,31 +110,8 @@ import java.util.stream.Stream;
                 .parallel()
                 .map(entry -> update(entry.getKey(), entry.getValue()))
                 .forEach(IntegrationResults::updateParticle);
-
-        final double yMin = particles.stream()
-                .map(Particle::getPosition)
-                .map(Vector2D::getY)
-                .max(Double::compare)
-                .orElseThrow(() -> new RuntimeException("This should not happen"));
-        final List<Particle> mustRespawn = particles.stream()
-                .filter(particle -> particle.getPosition().getY() < -siloLength / 10d)
-                .collect(Collectors.toList());
-        for (Particle particle : mustRespawn) {
-            int tries = 0;
-            boolean exitLoop = false;
-            while (tries < MAX_AMOUNT_OF_TRIES && !exitLoop) {
-                final double radius = particle.getRadius();
-                final double xPosition = radius + new Random().nextDouble() * (siloWidth - 2 * radius);
-                final Vector2D position = new Vector2D(xPosition, yMin + radius / 4);
-                if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
-                    particle.setPosition(position);
-                    exitLoop = true;
-                } else {
-                    tries++;
-                }
-            }
-        }
         this.previousAccelerations.putAll(actualAccelerations);
+        respawn();
     }
 
     @Override
@@ -156,7 +132,7 @@ import java.util.stream.Stream;
     private void setPreviousAccelerations() {
         this.previousAccelerations.clear();
         final Map<Particle, Vector2D> newValues = particles.stream()
-                .collect(Collectors.toMap(Function.identity(), this::initialPreviousAcceleration));
+                .collect(Collectors.toMap(Function.identity(), p -> gravity));
         this.previousAccelerations.putAll(newValues);
     }
 
@@ -262,13 +238,69 @@ import java.util.stream.Stream;
     }
 
     /**
-     * Calculates the initial previous acceleration for the given {@code particle}.
-     *
-     * @param particle The {@link Particle} to which the initial previous accelerations will be calculated.
-     * @return The calculated initial previous acceleration.
+     * Performs the respawn of the {@link Particle}s.
      */
-    private Vector2D initialPreviousAcceleration(final Particle particle) {
-        return gravity; // TODO: implement
+    private void respawn() {
+        final List<Particle> insideTheSilo = particles.stream()
+                .parallel()
+                .filter(particle -> particle.getPosition().getY() > 0)
+                .collect(Collectors.toList());
+        if (insideTheSilo.isEmpty()) {
+            for (Particle particle : particles) {
+                respawn(particle, 0, 3 * particle.getRadius());
+            }
+        }
+
+        final double mean = insideTheSilo.stream()
+                .parallel()
+                .map(Particle::getPosition)
+                .mapToDouble(Vector2D::getY)
+                .average()
+                .orElseThrow(() -> new RuntimeException("This should not happen"));
+        final double standardDeviation = insideTheSilo.stream()
+                .parallel()
+                .map(Particle::getPosition)
+                .mapToDouble(Vector2D::getY)
+                .map(y -> y - mean)
+                .map(y -> y * y)
+                .average()
+                .orElseThrow(() -> new RuntimeException("This should not happen"));
+        final List<Particle> mustRespawn = particles
+                .stream()
+                .parallel()
+                .filter(particle -> particle.getPosition().getY() < -siloLength / 10d)
+                .collect(Collectors.toList());
+        final double minY = mean + 2 * standardDeviation;
+        for (Particle particle : mustRespawn) {
+            respawn(particle, minY + 4 * particle.getRadius(), minY + 8 * particle.getRadius());
+        }
+    }
+
+    /**
+     * Performs the respawn of the given {@code particle}.
+     *
+     * @param particle    The {@link Particle} to be re-spawned.
+     * @param yRespawnMin The min. 'y' at which the given {@code particle} can be re-spawned.
+     * @param yRespawnMax The max. 'y' at which the given {@code particle} can be re-spawned.
+     */
+    private void respawn(final Particle particle, final double yRespawnMin, final double yRespawnMax) {
+        int tries = 0;
+        boolean exitLoop = false;
+        while (tries < MAX_AMOUNT_OF_TRIES && !exitLoop) {
+            final double radius = particle.getRadius();
+            final double xPosition = radius + new Random().nextDouble() * (siloWidth - 2 * radius);
+            final double yPosition = yRespawnMin + new Random().nextDouble() * (yRespawnMax - yRespawnMin);
+            final Vector2D position = new Vector2D(xPosition, yPosition);
+            if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
+                particle.setPosition(position);
+                particle.setVelocity(Vector2D.ZERO);
+                particle.setAcceleration(gravity);
+                previousAccelerations.put(particle, gravity);
+                exitLoop = true;
+            } else {
+                tries++;
+            }
+        }
     }
 
     /**

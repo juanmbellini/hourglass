@@ -56,7 +56,6 @@ import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 
         final Vector2D normalUnitVector = wrapper2.getPosition().subtract(wrapper1.getPosition()).normalize();
         return getContactForce(normalUnitVector, overlap, wrapper1.getVelocity().subtract(wrapper2.getVelocity()));
-
     }
 
 
@@ -140,8 +139,7 @@ import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
         return normalUnitVector
                 .scalarMultiply(relativeVelocity.dotProduct(normalUnitVector))
                 .scalarMultiply(viscousDampingCoefficient)
-                .scalarMultiply(-1)
-                ;
+                .scalarMultiply(-1);
     }
 
 

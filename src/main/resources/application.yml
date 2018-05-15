@@ -11,9 +11,9 @@ custom:
         particle:
             min-diameter: 0.02
             max-diameter: 0.03
-            kn: 100000
-            gamma: 60
-            mass: 0.01
+            kn: 1000
+            gamma: 20
+            mass: 0.1
 
 
 ---

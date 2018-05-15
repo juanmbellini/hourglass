@@ -2,8 +2,8 @@ package ar.edu.itba.ss.hourglass.models;
 
 import ar.edu.itba.ss.g7.engine.models.System;
 import ar.edu.itba.ss.g7.engine.simulation.State;
+import ar.edu.itba.ss.hourglass.utils.Constants;
 import ar.edu.itba.ss.hourglass.utils.ParticleProvider;
-import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.springframework.util.Assert;
 
 import java.util.LinkedList;
@@ -136,14 +136,14 @@ public class Silo implements System<Silo.SiloState> {
         this.particles.addAll(particleProvider.createParticles());
 
         // Integration
-        this.timeStep = 0.1 * Math.sqrt(mass / elasticConstant);
+        this.timeStep = 0.001 * Math.sqrt(mass / elasticConstant);
         this.duration = duration;
         this.actualTime = 0;
 
         final List<Wall> walls = Stream.of(leftBottomWall, rightBottomWall, leftWall, rightWall, topWall)
                 .collect(Collectors.toList());
-        this.integrator = new BeemanIntegrator(particles, walls, length, width, timeStep, elasticConstant, dampingCoefficient,
-                new Vector2D(0, -10));
+        this.integrator = new BeemanIntegrator(particles, walls, length, width, timeStep,
+                elasticConstant, dampingCoefficient, Constants.GRAVITY);
 
         this.clean = true;
     }
