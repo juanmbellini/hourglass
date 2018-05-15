@@ -14,11 +14,6 @@ import java.util.stream.Stream;
 /* package */ class BeemanIntegrator implements Integrator {
 
     /**
-     * The max. amount of consecutive failed tries of re-spawning a {@link Particle}
-     */
-    private static final int MAX_AMOUNT_OF_TRIES = 1000;
-
-    /**
      * The {@link List} of {@link Particle}s that are going to be integrated.
      */
     private final List<Particle> particles;
@@ -111,16 +106,21 @@ import java.util.stream.Stream;
                 .map(entry -> update(entry.getKey(), entry.getValue()))
                 .forEach(IntegrationResults::updateParticle);
         this.previousAccelerations.putAll(actualAccelerations);
-        respawn();
     }
 
     @Override
-    public void setNewParticles(List<Particle> newParticles) {
+    public void setNewParticles(final List<Particle> newParticles) {
         this.particles.clear();
         this.particles.addAll(newParticles);
         setPreviousAccelerations();
     }
 
+    @Override
+    public void reportReSpawned(final List<Particle> particles) {
+        for (Particle particle : particles) {
+            previousAccelerations.put(particle, gravity);
+        }
+    }
 
     // ================================================================================================================
     // Helpers
@@ -237,71 +237,7 @@ import java.util.stream.Stream;
                 .subtract(previousAcceleration.scalarMultiply((1d / 6d) * timeStep));
     }
 
-    /**
-     * Performs the respawn of the {@link Particle}s.
-     */
-    private void respawn() {
-        final List<Particle> insideTheSilo = particles.stream()
-                .parallel()
-                .filter(particle -> particle.getPosition().getY() > 0)
-                .collect(Collectors.toList());
-        if (insideTheSilo.isEmpty()) {
-            for (Particle particle : particles) {
-                respawn(particle, 0, 3 * particle.getRadius());
-            }
-        }
 
-        final double mean = insideTheSilo.stream()
-                .parallel()
-                .map(Particle::getPosition)
-                .mapToDouble(Vector2D::getY)
-                .average()
-                .orElseThrow(() -> new RuntimeException("This should not happen"));
-        final double standardDeviation = insideTheSilo.stream()
-                .parallel()
-                .map(Particle::getPosition)
-                .mapToDouble(Vector2D::getY)
-                .map(y -> y - mean)
-                .map(y -> y * y)
-                .average()
-                .orElseThrow(() -> new RuntimeException("This should not happen"));
-        final List<Particle> mustRespawn = particles
-                .stream()
-                .parallel()
-                .filter(particle -> particle.getPosition().getY() < -siloLength / 10d)
-                .collect(Collectors.toList());
-        final double minY = mean + 2 * standardDeviation;
-        for (Particle particle : mustRespawn) {
-            respawn(particle, minY + 4 * particle.getRadius(), minY + 8 * particle.getRadius());
-        }
-    }
-
-    /**
-     * Performs the respawn of the given {@code particle}.
-     *
-     * @param particle    The {@link Particle} to be re-spawned.
-     * @param yRespawnMin The min. 'y' at which the given {@code particle} can be re-spawned.
-     * @param yRespawnMax The max. 'y' at which the given {@code particle} can be re-spawned.
-     */
-    private void respawn(final Particle particle, final double yRespawnMin, final double yRespawnMax) {
-        int tries = 0;
-        boolean exitLoop = false;
-        while (tries < MAX_AMOUNT_OF_TRIES && !exitLoop) {
-            final double radius = particle.getRadius();
-            final double xPosition = radius + new Random().nextDouble() * (siloWidth - 2 * radius);
-            final double yPosition = yRespawnMin + new Random().nextDouble() * (yRespawnMax - yRespawnMin);
-            final Vector2D position = new Vector2D(xPosition, yPosition);
-            if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
-                particle.setPosition(position);
-                particle.setVelocity(Vector2D.ZERO);
-                particle.setAcceleration(gravity);
-                previousAccelerations.put(particle, gravity);
-                exitLoop = true;
-            } else {
-                tries++;
-            }
-        }
-    }
 
     /**
      * Class containing the integration results for a given {@link Particle}.

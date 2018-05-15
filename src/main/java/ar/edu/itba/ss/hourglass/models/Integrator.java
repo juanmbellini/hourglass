@@ -18,4 +18,11 @@ public interface Integrator {
      * @param newParticles The new {@link Particle}s.
      */
     void setNewParticles(final List<Particle> newParticles);
+
+    /**
+     * Reports the particles that have been re-spawned.
+     *
+     * @param particles The re-spawned {@link Particle}s.
+     */
+    void reportReSpawned(final List<Particle> particles);
 }
