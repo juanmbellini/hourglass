@@ -1,6 +1,7 @@
 package ar.edu.itba.ss.hourglass.io;
 
 import ar.edu.itba.ss.g7.engine.io.OvitoFileSaver;
+import ar.edu.itba.ss.g7.engine.simulation.State;
 import ar.edu.itba.ss.hourglass.models.Particle;
 import ar.edu.itba.ss.hourglass.models.Silo;
 import ar.edu.itba.ss.hourglass.models.Wall;
@@ -14,33 +15,43 @@ import java.io.Writer;
 public class OvitoFileSaverImpl extends OvitoFileSaver<Silo.SiloState> {
 
     /**
+     * The total amount of times the {@link #saveState(Writer, State, int)} was called.
+     */
+    private int outputtedAmount = 0;
+
+    /**
      * Constructor.
      *
      * @param filePath Path to the file to be saved.
      */
     public OvitoFileSaverImpl(String filePath) {
         super(filePath);
+        this.outputtedAmount = 0;
     }
 
     @Override
     public void saveState(Writer writer, Silo.SiloState siloState, int frame) throws IOException {
-        final StringBuilder data = new StringBuilder()
-                // First, headers
-                .append(siloState.getParticleStates().size() + 2 * 5)
-                .append("\n")
-                .append(frame)
-                .append("\n");
+        // TODO: make this be calculated automatically
+        if (outputtedAmount % 600 == 0) {
+            final StringBuilder data = new StringBuilder()
+                    // First, headers
+                    .append(siloState.getParticleStates().size() + 2 * 5)
+                    .append("\n")
+                    .append(frame)
+                    .append("\n");
 
-        for (Particle.ParticleState particle : siloState.getParticleStates()) {
-            saveParticle(data, particle);
+            for (Particle.ParticleState particle : siloState.getParticleStates()) {
+                saveParticle(data, particle);
+            }
+            saveWall(data, siloState.getLeftWall());
+            saveWall(data, siloState.getRightWall());
+            saveWall(data, siloState.getLeftBottomWall());
+            saveWall(data, siloState.getRightBottomWall());
+            saveWall(data, siloState.getTopWall());
+            // Append data into the Writer
+            writer.append(data);
         }
-        saveWall(data, siloState.getLeftWall());
-        saveWall(data, siloState.getRightWall());
-        saveWall(data, siloState.getLeftBottomWall());
-        saveWall(data, siloState.getRightBottomWall());
-        saveWall(data, siloState.getTopWall());
-        // Append data into the Writer
-        writer.append(data);
+        this.outputtedAmount++;
     }
 
     /**
