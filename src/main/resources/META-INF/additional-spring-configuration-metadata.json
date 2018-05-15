@@ -49,6 +49,11 @@
       "name": "custom.output.ovito",
       "type": "java.lang.String",
       "description": "The path for the Ovito file."
+    },
+    {
+      "name": "custom.output.physics",
+      "type": "java.lang.String",
+      "description": "The path for the physics file."
     }
   ]
 }

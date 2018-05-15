@@ -1,6 +1,8 @@
 package ar.edu.itba.ss.hourglass;
 
+import ar.edu.itba.ss.g7.engine.io.DataSaver;
 import ar.edu.itba.ss.g7.engine.simulation.SimulationEngine;
+import ar.edu.itba.ss.hourglass.io.OvitoFileSaverImpl;
 import ar.edu.itba.ss.hourglass.io.ProgramArguments;
 import ar.edu.itba.ss.hourglass.models.Silo;
 import org.slf4j.Logger;
@@ -10,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import java.util.LinkedList;
 
 /**
  * Main class.
@@ -26,6 +30,11 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
      * The {@link SimulationEngine}.
      */
     private final SimulationEngine<Silo.SiloState, Silo> engine;
+
+    /**
+     * A {@link DataSaver} to create the Ovito file.
+     */
+    private final DataSaver<Silo.SiloState> ovitoFileSaver;
 
     /**
      * Constructor.
@@ -45,6 +54,7 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
                 normalElasticConstant, viscousDampingCoefficient, duration);
 
         this.engine = new SimulationEngine<>(silo);
+        this.ovitoFileSaver = new OvitoFileSaverImpl(programArguments.getOutputStuff().getOvitoFilePath());
     }
 
 
@@ -79,6 +89,7 @@ public class Hourglass implements CommandLineRunner, InitializingBean {
      */
     private void save() {
         LOGGER.info("Saving outputs...");
+        ovitoFileSaver.save(new LinkedList<>(this.engine.getResults()));
         // TODO: save here
         LOGGER.info("Finished saving output in all formats.");
     }

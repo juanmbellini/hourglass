@@ -26,19 +26,27 @@ public class ProgramArguments {
     private final SiloShapeProperties siloShapeProperties;
 
     /**
+     * The output stuff.
+     */
+    private final OutputStuff outputStuff;
+
+    /**
      * Constructor.
      *
      * @param duration            The simulation's duration.
      * @param particleProperties  The particles' stuff.
      * @param siloShapeProperties The silo's stuff.
+     * @param outputStuff         The output stuff.
      */
     @Autowired
     public ProgramArguments(@Value("${custom.simulation.duration}") double duration,
                             final ParticleProperties particleProperties,
-                            final SiloShapeProperties siloShapeProperties) {
+                            final SiloShapeProperties siloShapeProperties,
+                            final OutputStuff outputStuff) {
         this.duration = duration;
         this.particleProperties = particleProperties;
         this.siloShapeProperties = siloShapeProperties;
+        this.outputStuff = outputStuff;
     }
 
     /**
@@ -60,6 +68,13 @@ public class ProgramArguments {
      */
     public SiloShapeProperties getSiloShapeProperties() {
         return siloShapeProperties;
+    }
+
+    /**
+     * @return The output stuff.
+     */
+    public OutputStuff getOutputStuff() {
+        return outputStuff;
     }
 
     /**
@@ -207,6 +222,48 @@ public class ProgramArguments {
          */
         public double getSiloHoleSize() {
             return siloHoleSize;
+        }
+    }
+
+    /**
+     * Output stuff.
+     */
+    @Component
+    public static final class OutputStuff {
+
+        /**
+         * Path for the Ovito file.
+         */
+        private final String ovitoFilePath;
+
+        /**
+         * Path for the physics file.
+         */
+        private final String physicsFilePath;
+
+        /**
+         * @param ovitoFilePath   Path for the Ovito file.
+         * @param physicsFilePath Path for the physics file.
+         */
+        @Autowired
+        public OutputStuff(@Value("${custom.output.ovito}") final String ovitoFilePath,
+                           @Value("${custom.output.physics}") final String physicsFilePath) {
+            this.ovitoFilePath = ovitoFilePath;
+            this.physicsFilePath = physicsFilePath;
+        }
+
+        /**
+         * @return Path for the Ovito file.
+         */
+        public String getOvitoFilePath() {
+            return ovitoFilePath;
+        }
+
+        /**
+         * @return Path for the physics file.
+         */
+        public String getPhysicsFilePath() {
+            return physicsFilePath;
         }
     }
 }
