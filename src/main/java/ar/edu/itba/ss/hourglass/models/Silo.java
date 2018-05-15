@@ -2,23 +2,29 @@ package ar.edu.itba.ss.hourglass.models;
 
 import ar.edu.itba.ss.g7.engine.models.System;
 import ar.edu.itba.ss.g7.engine.simulation.State;
+import ar.edu.itba.ss.hourglass.utils.Constants;
 import ar.edu.itba.ss.hourglass.utils.ParticleProvider;
-import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.springframework.util.Assert;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Represents the silo to be simulated (i.e the {@link System} to be simulated).
  */
 public class Silo implements System<Silo.SiloState> {
 
+
+    // ================================================================================================================
+    // Shape stuff
+    // ================================================================================================================
+
     /**
      * The silo's top wall.
      */
-    private final Wall topWall; // TODO: maybe is not needed
+    private final Wall topWall;
 
     /**
      * The silo's left wall.
@@ -40,10 +46,10 @@ public class Silo implements System<Silo.SiloState> {
      */
     private final Wall rightBottomWall;
 
-    /**
-     * The normal elastic constant.
-     */
-    private final double normalElasticConstant;
+
+    // ================================================================================================================
+    // Particles
+    // ================================================================================================================
 
     /**
      * The {@link Particle}s in this silo.
@@ -56,35 +62,96 @@ public class Silo implements System<Silo.SiloState> {
     private final ParticleProvider particleProvider;
 
 
+    // ================================================================================================================
+    // Integration
+    // ================================================================================================================
+
+    /**
+     * The time step.
+     */
+    private final double timeStep;
+
+    /**
+     * The simulation duration.
+     */
+    private final double duration;
+
+    /**
+     * The actual time.
+     */
+    private double actualTime;
+
+    /**
+     * The {@link Integrator} used to move {@link Particle}s.
+     */
+    private final Integrator integrator;
+
+
+    // ================================================================================================================
+    // Others
+    // ================================================================================================================
+
+    /**
+     * Indicates whether this silo is clean (i.e can be used to perform the simulation from the beginning).
+     */
+    private boolean clean;
+
+    // ================================================================================================================
+    // Constructor
+    // ================================================================================================================
+
     /**
      * Constructor.
      *
-     * @param width                 The silo's length.
-     * @param length                The silo's width.
-     * @param hole                  The silo's hole size.
-     * @param normalElasticConstant The normal elastic constant.
-     * @param minRadius             The min. radius of a {@link Particle}.
-     * @param maxRadius             The max. radius of a {@link Particle}.
-     * @param mass                  The mass of a {@link Particle}.
+     * @param length             The silo's width.
+     * @param width              The silo's length.
+     * @param hole               The silo's hole size.
+     * @param minRadius          The min. radius of a {@link Particle}.
+     * @param maxRadius          The max. radius of a {@link Particle}.
+     * @param mass               The mass of a {@link Particle}.
+     * @param elasticConstant    The elastic constant.
+     * @param dampingCoefficient The damping coefficient.
+     * @param duration           The amount of time the simulation will last.
      */
     public Silo(final double length, final double width, final double hole,
                 final double minRadius, final double maxRadius, final double mass,
-                final double normalElasticConstant) {
+                final double elasticConstant, final double dampingCoefficient,
+                final double duration) {
+
         validateShape(length, width, hole);
-        // TODO: validate radius, mass and elasticConstant
-        final double bottomWallLength = (width - hole) / 2d;
-        this.leftBottomWall = Wall.getHorizontal(Vector2D.ZERO, bottomWallLength);
-        this.rightBottomWall = Wall.getHorizontal(new Vector2D(bottomWallLength + hole, 0), bottomWallLength);
-        this.leftWall = Wall.getVertical(Vector2D.ZERO, length);
-        this.rightWall = Wall.getVertical(new Vector2D(width, 0), length);
-        this.topWall = Wall.getHorizontal(new Vector2D(length, 0), width);
-        this.normalElasticConstant = normalElasticConstant;
+        // TODO: validate radius, mass, etc
+
+        // Shape stuff
+        this.leftBottomWall = Wall.getLeftBottomWall(width, hole);
+        this.rightBottomWall = Wall.getRightBottomWall(width, hole);
+        this.leftWall = Wall.getLeftWall(length);
+        this.rightWall = Wall.getRightWall(length, width);
+        this.topWall = Wall.getTopWall(length, width);
+
+        // Particles
         this.particleProvider = new ParticleProvider(minRadius, maxRadius, mass,
-                leftBottomWall.getInitialPoint().getX(), rightWall.getFinalPoint().getX(),
-                leftBottomWall.getInitialPoint().getY(), rightWall.getFinalPoint().getY());
+                leftWall.getInitialPoint().getX(), rightWall.getFinalPoint().getX(),
+                leftWall.getInitialPoint().getY(), leftWall.getFinalPoint().getY());
         this.particles = new LinkedList<>();
         this.particles.addAll(particleProvider.createParticles());
+
+        // Integration
+        this.timeStep = 0.001 * Math.sqrt(mass / elasticConstant);
+        this.duration = duration;
+        this.actualTime = 0;
+
+        final List<Wall> walls = Stream.of(leftBottomWall, rightBottomWall, leftWall, rightWall, topWall)
+                .collect(Collectors.toList());
+        this.integrator = new BeemanIntegrator(particles, walls, length, width, timeStep,
+                elasticConstant, dampingCoefficient, Constants.GRAVITY);
+
+        this.clean = true;
     }
+
+
+    // ================================================================================================================
+    // Getters
+    // ================================================================================================================
 
     /**
      * @return The silo's top wall.
@@ -128,25 +195,48 @@ public class Silo implements System<Silo.SiloState> {
         return new LinkedList<>(particles);
     }
 
-    public boolean isStabilized() {
-        return false; // TODO: implement
+    /**
+     * Indicates whether the simulation should stop.
+     *
+     * @return {@code true} if the simulation should stop, or {@code false} otherwise.
+     */
+    public boolean shouldStop() {
+        return actualTime > duration;
     }
+
+
+    // ================================================================================================================
+    // Interface stuff
+    // ================================================================================================================
 
     @Override
     public void update() {
-        // TODO: implement
+        clean = false;
+        integrator.update();
+        actualTime += timeStep;
     }
 
     @Override
     public void restart() {
+        if (clean) {
+            return;
+        }
+
         this.particles.clear();
         this.particles.addAll(this.particleProvider.createParticles());
+        this.actualTime = 0;
+        this.clean = true;
     }
 
     @Override
     public SiloState outputState() {
         return new SiloState(this);
     }
+
+
+    // ================================================================================================================
+    // Helpers
+    // ================================================================================================================
 
     /**
      * Validates the given shape values.
@@ -208,7 +298,9 @@ public class Silo implements System<Silo.SiloState> {
             this.rightWall = silo.getRightWall().outputState();
             this.leftBottomWall = silo.getLeftBottomWall().outputState();
             this.rightBottomWall = silo.getRightBottomWall().outputState();
-            this.particleStates = silo.particles.stream().map(Particle.ParticleState::new).collect(Collectors.toList());
+            this.particleStates = silo.getParticles().stream()
+                    .map(Particle.ParticleState::new)
+                    .collect(Collectors.toList());
         }
 
         /**

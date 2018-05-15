@@ -67,7 +67,7 @@ public class ParticleProvider {
         this.xMin = xMin;
         this.xMax = xMax;
         this.yMin = yMin;
-        this.yMax = yMax;
+        this.yMax = yMax * 0.35;
     }
 
     /**
@@ -79,12 +79,12 @@ public class ParticleProvider {
         final List<Particle> particles = new LinkedList<>();
         int tries = 0; // Will count the amount of consecutive failed tries of adding randomly a particle into the list.
         while (tries < MAX_AMOUNT_OF_TRIES) {
-            final double xPosition = xMin + new Random().nextDouble() * (xMax - xMin);
-            final double yPosition = yMin + new Random().nextDouble() * (yMax - yMin);
-            final Vector2D position = new Vector2D(xPosition, yPosition);
             final double radius = minRadius + new Random().nextDouble() * (maxRadius - minRadius);
+            final double xPosition = (xMin + radius) + new Random().nextDouble() * ((xMax - radius) - (xMin + radius));
+            final double yPosition = (yMin + radius) + new Random().nextDouble() * ((yMax - radius) - (yMin + radius));
+            final Vector2D position = new Vector2D(xPosition, yPosition);
             if (particles.stream().noneMatch(p -> p.doOverlap(position, radius))) {
-                particles.add(new Particle(this.mass, radius, position, Vector2D.ZERO, Vector2D.ZERO));
+                particles.add(new Particle(this.mass, radius, position, Vector2D.ZERO, Constants.GRAVITY));
                 tries = 0; // When a particle is added, the counter of consecutive failed tries must be set to zero.
             } else {
                 tries++;

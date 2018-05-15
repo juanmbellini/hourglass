@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProgramArguments {
 
+    /**
+     * The simulation's duration.
+     */
+    private final double duration;
 
     /**
      * The particles' stuff.
@@ -24,14 +28,24 @@ public class ProgramArguments {
     /**
      * Constructor.
      *
+     * @param duration            The simulation's duration.
      * @param particleProperties  The particles' stuff.
      * @param siloShapeProperties The silo's stuff.
      */
     @Autowired
-    public ProgramArguments(final ParticleProperties particleProperties,
+    public ProgramArguments(@Value("${custom.simulation.duration}") double duration,
+                            final ParticleProperties particleProperties,
                             final SiloShapeProperties siloShapeProperties) {
+        this.duration = duration;
         this.particleProperties = particleProperties;
         this.siloShapeProperties = siloShapeProperties;
+    }
+
+    /**
+     * @return The simulation's duration.
+     */
+    public double getDuration() {
+        return duration;
     }
 
     /**
@@ -70,6 +84,11 @@ public class ProgramArguments {
         private final double normalElasticConstant;
 
         /**
+         * The viscous damping coefficient.
+         */
+        private final double viscousDampingCoefficient;
+
+        /**
          * The particle's mass.
          */
         private final double mass;
@@ -77,19 +96,22 @@ public class ProgramArguments {
         /**
          * Constructor.
          *
-         * @param minDiameter           The min. diameter for a particle.
-         * @param maxDiameter           The max. diameter for a particle.
-         * @param normalElasticConstant The normal elastic constant.
-         * @param mass                  The particle's mass.
+         * @param minDiameter               The min. diameter for a particle.
+         * @param maxDiameter               The max. diameter for a particle.
+         * @param normalElasticConstant     The normal elastic constant.
+         * @param viscousDampingCoefficient The viscous damping coefficient.
+         * @param mass                      The particle's mass.
          */
         @Autowired
         public ParticleProperties(@Value("${custom.system.particle.min-diameter}") final double minDiameter,
                                   @Value("${custom.system.particle.max-diameter}") final double maxDiameter,
                                   @Value("${custom.system.particle.kn}") final double normalElasticConstant,
+                                  @Value("${custom.system.particle.gamma}") final double viscousDampingCoefficient,
                                   @Value("${custom.system.particle.mass}") final double mass) {
             this.minDiameter = minDiameter;
             this.maxDiameter = maxDiameter;
             this.normalElasticConstant = normalElasticConstant;
+            this.viscousDampingCoefficient = viscousDampingCoefficient;
             this.mass = mass;
         }
 
@@ -112,6 +134,13 @@ public class ProgramArguments {
          */
         public double getNormalElasticConstant() {
             return normalElasticConstant;
+        }
+
+        /**
+         * @return The viscous damping coefficient.
+         */
+        public double getViscousDampingCoefficient() {
+            return viscousDampingCoefficient;
         }
 
         /**

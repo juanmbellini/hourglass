@@ -2,6 +2,7 @@ package ar.edu.itba.ss.hourglass.models;
 
 import ar.edu.itba.ss.g7.engine.simulation.State;
 import ar.edu.itba.ss.g7.engine.simulation.StateHolder;
+import ar.edu.itba.ss.hourglass.utils.SpaceUtils;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.springframework.util.Assert;
 
@@ -41,6 +42,10 @@ public class Particle implements StateHolder<Particle.ParticleState> {
      */
     private Vector2D acceleration;
 
+
+    // ================================================================================================================
+    // Constructor
+    // ================================================================================================================
 
     /**
      * Constructor.
@@ -117,14 +122,12 @@ public class Particle implements StateHolder<Particle.ParticleState> {
     // Setters
     // ================================================================================================================
 
-    // TODO: check if state will be modified from outside or if the particle receives a System and, based on it, modifies itself
-
     /**
      * Sets a new position for this particle.
      *
      * @param position The new position for this particle.
      */
-    public void setPosition(final Vector2D position) {
+    /* package */ void setPosition(final Vector2D position) {
         validateVector(position);
         this.position = position;
     }
@@ -134,7 +137,7 @@ public class Particle implements StateHolder<Particle.ParticleState> {
      *
      * @param velocity The new velocity for this particle.
      */
-    public void setVelocity(final Vector2D velocity) {
+    /* package */ void setVelocity(final Vector2D velocity) {
         validateVector(velocity);
         this.velocity = velocity;
     }
@@ -144,10 +147,14 @@ public class Particle implements StateHolder<Particle.ParticleState> {
      *
      * @param acceleration The new acceleration for this particle.
      */
-    public void setAcceleration(final Vector2D acceleration) {
+    /* package */ void setAcceleration(final Vector2D acceleration) {
         validateVector(acceleration);
         this.acceleration = acceleration;
     }
+
+    // ================================================================================================================
+    // Others
+    // ================================================================================================================
 
 
     /**
@@ -158,8 +165,7 @@ public class Particle implements StateHolder<Particle.ParticleState> {
      * @return {@code true} if the new particle would overlap {@code this} particle, or {@code false} otherwise.
      */
     public boolean doOverlap(final Vector2D position, final double radius) {
-        final double distanceBetweenCentreMasses = this.position.distance(position);
-        return Double.compare(distanceBetweenCentreMasses, this.radius + radius) < 0;
+        return SpaceUtils.overlap(this.position, position, this.radius, radius) > 0;
     }
 
     /**

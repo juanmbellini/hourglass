@@ -3,7 +3,6 @@ package ar.edu.itba.ss.hourglass.models;
 import ar.edu.itba.ss.g7.engine.simulation.State;
 import ar.edu.itba.ss.g7.engine.simulation.StateHolder;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
-import org.springframework.util.Assert;
 
 /**
  * Represents a wall in the system.
@@ -52,67 +51,88 @@ public final class Wall implements StateHolder<Wall.WallState> {
     }
 
 
+    /**
+     * @return The direction vector of thw wall (goes from the initial point to the final point).
+     * @see <a href="https://es.wikipedia.org/wiki/Vector_director">Vector Director</a>
+     * @see <a href="https://en.wikipedia.org/wiki/Euclidean_vector">Euclidean Vector</a>
+     */
+    public Vector2D getDirectionVector() {
+        return finalPoint.subtract(initialPoint);
+    }
+
+
     @Override
     public WallState outputState() {
         return new WallState(this);
     }
 
     /**
-     * Creates an horizontal wall (i.e having both initial and final point with the same 'y' component).
+     * Creates a top wall for a {@link Silo}.
      *
-     * @param initialPosition The initial position of the wall.
-     * @param length          The length of the wall (must be positive).
+     * @param length The length of the {@link Silo} (must be positive).
+     * @param width  The width of the {@link Silo} (must be positive).
      * @return The created wall.
-     * @throws IllegalArgumentException In case the length is not positive.
-     * @apiNote The created wall will have the final point with the same 'y' component
-     * of the given {@code initialPoint}, and the 'x' component being {@code initialPoint.getX() + length},
-     * which means that it grows with 'x'.
+     * @throws IllegalArgumentException In case the length or width are not positive.
      */
-    public static Wall getHorizontal(final Vector2D initialPosition, final double length)
-            throws IllegalArgumentException {
-        validateInitialPoint(initialPosition);
-        validateLength(length);
-        final Vector2D finalPosition = new Vector2D(initialPosition.getX() + length, initialPosition.getY());
-        return new Wall(initialPosition, finalPosition, WallLayout.HORIZONTAL);
+    public static Wall getTopWall(final double length, final double width) throws IllegalArgumentException {
+        final Vector2D initialPosition = new Vector2D(0, length);
+        final Vector2D finalPosition = new Vector2D(width, length);
+        return new Wall(initialPosition, finalPosition, WallLayout.TOP);
     }
 
     /**
-     * Creates a vertical wall (i.e having both initial and final point with the same 'x' component).
+     * Creates a left bottom wall for a {@link Silo}.
      *
-     * @param initialPosition The initial position of the wall.
-     * @param length          The length of the wall (must be positive).
+     * @param width The width of the {@link Silo} (must be positive).
+     * @param hole  The hole length.
      * @return The created wall.
-     * @throws IllegalArgumentException In case the length is not positive.
-     * @apiNote The created wall will have the final point with the same 'x' component
-     * of the given {@code initialPoint}, and the 'y' component being {@code initialPoint.getY() + length},
-     * which means that it grows with 'y'.
+     * @throws IllegalArgumentException In case the length or width are not positive.
      */
-    public static Wall getVertical(final Vector2D initialPosition, final double length)
-            throws IllegalArgumentException {
-        validateInitialPoint(initialPosition);
-        validateLength(length);
-        final Vector2D finalPosition = new Vector2D(initialPosition.getX(), initialPosition.getY() + length);
-        return new Wall(initialPosition, finalPosition, WallLayout.VERTICAL);
+    public static Wall getLeftBottomWall(final double width, final double hole) throws IllegalArgumentException {
+        final Vector2D initialPosition = new Vector2D(0, 0);
+        final Vector2D finalPosition = new Vector2D((width - hole) / 2, 0);
+        return new Wall(initialPosition, finalPosition, WallLayout.BOTTOM_LEFT);
     }
 
     /**
-     * Validates the given {@code initialPoint}.
+     * Creates a left bottom wall for a {@link Silo}.
      *
-     * @param initialPoint The initial point to be validated.
-     * @throws IllegalArgumentException In case the initial point is not valid (i.e is {@code null}).
+     * @param width The width of the {@link Silo} (must be positive).
+     * @param hole  The hole length.
+     * @return The created wall.
+     * @throws IllegalArgumentException In case the length or width are not positive.
      */
-    private static void validateInitialPoint(final Vector2D initialPoint) throws IllegalArgumentException {
-        Assert.notNull(initialPoint, "The initial point must not be null");
+    public static Wall getRightBottomWall(final double width, final double hole) throws IllegalArgumentException {
+        final Vector2D initialPosition = new Vector2D((width + hole) / 2, 0);
+        final Vector2D finalPosition = new Vector2D(width, 0);
+        return new Wall(initialPosition, finalPosition, WallLayout.BOTTOM_RIGHT);
     }
 
     /**
-     * Validates the given {@code length}.
+     * Creates a left bottom wall for a {@link Silo}.
      *
-     * @param length The length value to be validated.
-     * @throws IllegalArgumentException In case the value is not valid (i.e is not positive).
+     * @param length The length of the {@link Silo} (must be positive).
+     * @return The created wall.
+     * @throws IllegalArgumentException In case the length or width are not positive.
      */
-    private static void validateLength(final double length) throws IllegalArgumentException {
-        Assert.isTrue(length > 0, "The length of the wall must be positive");
+    public static Wall getLeftWall(final double length) throws IllegalArgumentException {
+        final Vector2D initialPosition = new Vector2D(0, 0);
+        final Vector2D finalPosition = new Vector2D(0, length);
+        return new Wall(initialPosition, finalPosition, WallLayout.LEFT);
+    }
+
+    /**
+     * Creates a left bottom wall for a {@link Silo}.
+     *
+     * @param length The length of the {@link Silo} (must be positive).
+     * @param width  The width of the {@link Silo} (must be positive).
+     * @return The created wall.
+     * @throws IllegalArgumentException In case the length or width are not positive.
+     */
+    public static Wall getRightWall(final double length, final double width) throws IllegalArgumentException {
+        final Vector2D initialPosition = new Vector2D(width, 0);
+        final Vector2D finalPosition = new Vector2D(width, length);
+        return new Wall(initialPosition, finalPosition, WallLayout.RIGHT);
     }
 
     /**
@@ -120,17 +140,25 @@ public final class Wall implements StateHolder<Wall.WallState> {
      */
     private enum WallLayout {
         /**
-         * Indicates that the wall is horizontal (i.e having both initial and final point with the same 'y' component).
+         * Indicates that this is a top wall.
          */
-        HORIZONTAL,
+        TOP,
         /**
-         * Indicates that the wall is vertical (i.e having both initial and final point with the same 'x' component).
+         * Indicates that this is a bottom left wall.
          */
-        VERTICAL,
+        BOTTOM_LEFT,
         /**
-         * Non vertical and non horizontal.
+         * Indicates that this is a bottom right wall.
          */
-        OTHER
+        BOTTOM_RIGHT,
+        /**
+         * Indicates that this is a right wall.
+         */
+        RIGHT,
+        /**
+         * Indicates that this is a left wall.
+         */
+        LEFT
     }
 
     /**
