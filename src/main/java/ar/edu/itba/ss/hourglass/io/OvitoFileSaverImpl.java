@@ -31,26 +31,27 @@ public class OvitoFileSaverImpl extends OvitoFileSaver<Silo.SiloState> {
 
     @Override
     public void saveState(Writer writer, Silo.SiloState siloState, int frame) throws IOException {
-        // TODO: make this be calculated automatically
-        if (outputtedAmount % 600 == 0) {
-            final StringBuilder data = new StringBuilder()
-                    // First, headers
-                    .append(siloState.getParticleStates().size() + 2 * 5)
-                    .append("\n")
-                    .append(frame)
-                    .append("\n");
-
-            for (Particle.ParticleState particle : siloState.getParticleStates()) {
-                saveParticle(data, particle);
-            }
-            saveWall(data, siloState.getLeftWall());
-            saveWall(data, siloState.getRightWall());
-            saveWall(data, siloState.getLeftBottomWall());
-            saveWall(data, siloState.getRightBottomWall());
-            saveWall(data, siloState.getTopWall());
-            // Append data into the Writer
-            writer.append(data);
+        if (siloState.getParticleStates().isEmpty()) {
+            return;
         }
+
+        final StringBuilder data = new StringBuilder()
+                // First, headers
+                .append(siloState.getParticleStates().size() + 2 * 5)
+                .append("\n")
+                .append(outputtedAmount)
+                .append("\n");
+
+        for (Particle.ParticleState particle : siloState.getParticleStates()) {
+            saveParticle(data, particle);
+        }
+        saveWall(data, siloState.getLeftWall());
+        saveWall(data, siloState.getRightWall());
+        saveWall(data, siloState.getLeftBottomWall());
+        saveWall(data, siloState.getRightBottomWall());
+        saveWall(data, siloState.getTopWall());
+        // Append data into the Writer
+        writer.append(data);
         this.outputtedAmount++;
     }
 

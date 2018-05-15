@@ -262,7 +262,7 @@ public class Silo implements System<Silo.SiloState> {
      * @return Indicates whether the particle's state should be saved.
      */
     private boolean shouldStoreParticles() {
-        return (actualTime / timeStep) % 600 == 0;
+        return (int) (actualTime / timeStep) % 600 == 0;
     }
 
     /**
