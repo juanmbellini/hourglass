@@ -94,7 +94,6 @@ import java.util.stream.Stream;
     public void update() {
         final Map<Particle, List<Particle>> neighborHoods = particles.stream()
                 .collect(Collectors.toMap(Function.identity(), particle -> particles.stream()
-                        .parallel()
                         .filter(p -> !p.equals(particle))
                         .filter(p -> particle.doOverlap(p.getPosition(), p.getRadius()))
                         .collect(Collectors.toList())));
@@ -102,7 +101,6 @@ import java.util.stream.Stream;
                 .collect(Collectors.toMap(Function.identity(), Particle::getAcceleration));
         neighborHoods.entrySet()
                 .stream()
-                .parallel()
                 .map(entry -> update(entry.getKey(), entry.getValue()))
                 .forEach(IntegrationResults::updateParticle);
         this.previousAccelerations.putAll(actualAccelerations);

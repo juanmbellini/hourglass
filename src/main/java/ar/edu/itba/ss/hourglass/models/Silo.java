@@ -259,6 +259,13 @@ public class Silo implements System<Silo.SiloState> {
     }
 
     /**
+     * @return Indicates whether the particle's state should be saved.
+     */
+    private boolean shouldStoreParticles() {
+        return (actualTime / timeStep) % 600 == 0;
+    }
+
+    /**
      * Indicates whether the simulation should stop.
      *
      * @return {@code true} if the simulation should stop, or {@code false} otherwise.
@@ -336,7 +343,6 @@ public class Silo implements System<Silo.SiloState> {
      */
     private void respawn() {
         final List<Particle> insideTheSilo = particles.stream()
-                .parallel()
                 .filter(particle -> particle.getPosition().getY() > 0)
                 .collect(Collectors.toList());
         if (insideTheSilo.isEmpty()) {
@@ -347,13 +353,11 @@ public class Silo implements System<Silo.SiloState> {
         }
 
         final double mean = insideTheSilo.stream()
-                .parallel()
                 .map(Particle::getPosition)
                 .mapToDouble(Vector2D::getY)
                 .average()
                 .orElseThrow(() -> new RuntimeException("This should not happen"));
         final double standardDeviation = insideTheSilo.stream()
-                .parallel()
                 .map(Particle::getPosition)
                 .mapToDouble(Vector2D::getY)
                 .map(y -> y - mean)
@@ -362,7 +366,6 @@ public class Silo implements System<Silo.SiloState> {
                 .orElseThrow(() -> new RuntimeException("This should not happen"));
         final List<Particle> mustRespawn = particles
                 .stream()
-                .parallel()
                 .filter(particle -> particle.getPosition().getY() < -siloLength / 10d)
                 .collect(Collectors.toList());
         final double minY = mean + 2 * standardDeviation;
@@ -455,9 +458,9 @@ public class Silo implements System<Silo.SiloState> {
             this.rightWall = silo.getRightWall().outputState();
             this.leftBottomWall = silo.getLeftBottomWall().outputState();
             this.rightBottomWall = silo.getRightBottomWall().outputState();
-            this.particleStates = silo.getParticles().stream()
+            this.particleStates = silo.shouldStoreParticles() ? silo.getParticles().stream()
                     .map(Particle.ParticleState::new)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()) : new LinkedList<>();
             this.kineticEnergy = silo.getSystemKineticEnergy();
             this.newOutside = silo.getNewOutside();
         }
